@@ -16,10 +16,23 @@ def authCheck(key):
     return key == '4d069b4e77b1d1804bead1d3bea762b8'
 
 def extract(path,rar_file):
-    return "unrar x -r "+path+'/'+rar_file+" "+path+'/'
+    if ".rar" in rar_file:
+        return "unrar x -r "+path+'/'+rar_file+" "+path+'/'
+    elif ".zip" in rar_file:
+        return "unzip "+path+'/'+rar_file+" -d "+'/'
 
 def download(folder):
-    return "zip -r {}.zip {}".format(folder.split('/')[-1],folder)    
+    return "zip -r {}.zip {}".format(folder.split('/')[-1],folder)
+    
+def compress(folder):
+    '''Compresses the file/folder and saves in
+    the same  directory
+    @return : output, err'''
+    cmd = "zip -r {}.zip {}".format(folder,folder)
+    print(cmd)
+    time = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,shell=True)
+    # output, err = time.communicate()  
+    return time.communicate()  
 #end of helper functions
 
 @app.route('/')
@@ -158,6 +171,7 @@ def unpack():
             if request.headers['command'] == "Extract":
                 # cmd = "unrar x -r "+request.headers['dest']+request.headers['file']+" "+request.headers['dest']
                 cmd = extract(request.headers['dest'],request.headers['file'])
+                print(cmd)
             elif request.headers['command'] == "Download":
                 print('herer')
                 print(request.headers['folder'])
@@ -169,6 +183,7 @@ def unpack():
                 return send_file(os.path.join(OUTPUT_DIR, request.headers['folder'].split('/')[-1]+'.zip'))
             time = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,shell=True)
             output, err = time.communicate()
+            print(output)
             return json.dumps("It is"+ str(output))
         except Exception as e:
             print(e)
@@ -183,6 +198,40 @@ def downloadFile(key):
     filename = request.args.get("filename")
     return send_file(filename)
     # return send_file(os.path.join(OUTPUT_DIR, filename))
+    
+@app.route('/compress/<key>',methods=['POST'])
+def compress_file(key):
+    if not authCheck(key):
+        return json.dumps({'message':'Unauthorized User'})
+    try:
+        if not authCheck(request.headers['Auth']):
+            return json.dumps({'message':'Unauthorized User'})
+    except:
+        return json.dumps({'message':'Unauthorized User'})
+    try:
+        out = compress(request.headers['folder'])
+        return json.dumps({'message':'success'})
+    except Exception as e:
+        print('last exception'+e.message)
+        return json.dumps({'error':e.message})
+        
+@app.route('/miscellaneous/<key>',methods =['POST'])
+def miscellaneous(key):
+    if not authCheck(key):
+        return json.dumps({'message':'Unauthorized User'})
+    try:
+        if not authCheck(request.headers['Auth']):
+            return json.dumps({'message':'Unauthorized User'})
+    except:
+        return json.dumps({'message':'Unauthorized User'})
+    
+    try:
+        if request.headers['command'] == 'Rename':
+            os.rename(request.headers['filename'],request.headers['newFileName'])
+            return json.dumps({'message':'Rename successfull'})
+    except Exception as e:
+        return json.dumps({'message':'error'})
+    
         
 
 if __name__ =="__main__":
