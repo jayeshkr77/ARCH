@@ -80,6 +80,7 @@ def content(file):
         file = open(request.headers['file'],'r')
         content = file.read()
         file.close()
+        print(content)
         return json.dumps({'file':content})
     except:
         return json.dumps({'message':'FolderNot found'}),404
@@ -139,7 +140,15 @@ def deleteFile():
             os.remove(request.headers['file'])
             return json.dumps({'message':'Deleted'})
         except OSError:
-            return json.dumps({'message':"Unable to delete file"}),500
+            try:
+                os.rmdir(request.headers['file'])
+                return json.dumps({'message':'Deleted'})
+            except Exception as e:
+                try:
+                    shutil.rmtree(request.headers['file'])
+                    return json.dumps({'message':'Deleted'})
+                except: 
+                    return json.dumps({'message':"Unable to delete file"}),500
     except Exception as e:
         print(e)
         return json.dumps({'message':'Unauthorized User'})
@@ -233,7 +242,5 @@ def miscellaneous(key):
         return json.dumps({'message':'error'})
     
         
-
 if __name__ =="__main__":
     app.run(host='0.0.0.0',debug=True)
-
